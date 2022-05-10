@@ -96,7 +96,7 @@ dataset_visualiztion(train_dataset)
 
 
     
-![png](output_9_1.png)
+![png]({{ site.baseurl }}/images/output_9_1.png)
     
 
 
@@ -259,7 +259,7 @@ plt.legend()
 
 
     
-![png](output_21_1.png)
+![png]({{ site.baseurl }}/images/output_21_1.png)
     
 
 
@@ -284,7 +284,7 @@ for images,labels in train_dataset.take(1):
 
 
     
-![png](output_26_0.png)
+![png]({{ site.baseurl }}/images/output_26_0.png)
     
 
 
@@ -306,7 +306,7 @@ plt.axis("off")
 
 
     
-![png](output_27_1.png)
+![png]({{ site.baseurl }}/images/output_27_1.png)
     
 
 
@@ -328,7 +328,7 @@ plt.axis("off")
 
 
     
-![png](output_28_1.png)
+![png]({{ site.baseurl }}/images/output_28_1.png)
     
 
 
@@ -350,7 +350,7 @@ plt.axis("off")
 
 
     
-![png](output_29_1.png)
+![png]({{ site.baseurl }}/images/output_29_1.png)
     
 
 
@@ -444,7 +444,7 @@ plt.legend()
 
 
     
-![png](output_33_1.png)
+![png]({{ site.baseurl }}/images/output_33_1.png)
     
 
 
@@ -554,7 +554,7 @@ plt.legend()
 
 
     
-![png](output_40_1.png)
+![png]({{ site.baseurl }}/images/output_40_1.png)
     
 
 
@@ -704,7 +704,7 @@ plt.legend()
 
 
     
-![png](output_49_1.png)
+![png]({{ site.baseurl }}/images/output_49_1.png)
     
 
 
