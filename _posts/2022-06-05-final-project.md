@@ -410,8 +410,8 @@ write_html(fig, "prediction1.html")
     /usr/local/lib/python3.7/dist-packages/ipykernel_launcher.py:3: UserWarning: `Model.predict_generator` is deprecated and will be removed in a future version. Please use `Model.predict`, which supports generators.
       This is separate from the ipykernel package so we can avoid doing imports until
     
-![PNG]({{ site.baseurl }}/images/prediction1.PNG)
-![PNG]({{ site.baseurl }}/images/prediction2.PNG)
+![png]({{ site.baseurl }}/images/prediction1.png)
+![png]({{ site.baseurl }}/images/prediction2.png)
 
 Our model is looking extremely promising. Our model has managed to accurately predict every major turning points in the stock market. If this is real, we would all be billionairs. But is there a catch? It almost looks too good to be true. Let's see how it performs in the real world.
 
