@@ -1,3 +1,8 @@
+---
+layout: post
+title: stock preidiction model
+---
+
 # Investigating Stock Prediction with RNN
 
 A recurrent neural network uses its internal state to process sequential inputs, which makes it great for time series data such as stock prices. In this blog post, we will investigate the popular LSTM, long short-term memory, method for stock prediction.
