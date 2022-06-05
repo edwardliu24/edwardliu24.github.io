@@ -411,7 +411,6 @@ write_html(fig, "prediction1.html")
       This is separate from the ipykernel package so we can avoid doing imports until
     
 ![png]({{ site.baseurl }}/images/prediction1.png)
-![png]({{ site.baseurl }}/images/prediction2.png)
 
 Our model is looking extremely promising. Our model has managed to accurately predict every major turning points in the stock market. If this is real, we would all be billionairs. But is there a catch? It almost looks too good to be true. Let's see how it performs in the real world.
 
@@ -500,7 +499,7 @@ layout = go.Layout(
 fig = go.Figure(data=[trace1, trace2], layout=layout)
 ```
 
-
+![png]({{ site.baseurl }}/images/prediction2.png)
 
 With just two months of prediction, we are seeing a significant deviation from the actual price trend. Our model tells us that SP500 will continue tanking for two months, with no significant pullbacks. This is highly unlikely based on experience. The actual price trend, however, is much more reasonable.
 
