@@ -500,7 +500,6 @@ fig = go.Figure(data=[trace1, trace2], layout=layout)
 ```
 
 ![png]({{ site.baseurl }}/images/prediction_2.png)
-![png]({{ site.baseurl }}/images/submit.png)
 
 With just two months of prediction, we are seeing a significant deviation from the actual price trend. Our model tells us that SP500 will continue tanking for two months, with no significant pullbacks. This is highly unlikely based on experience. The actual price trend, however, is much more reasonable.
 
