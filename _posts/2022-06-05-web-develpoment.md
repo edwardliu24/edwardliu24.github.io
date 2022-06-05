@@ -168,11 +168,17 @@ def random_messages(n):
 
 There are four webpages of this app, which are "main","base","view" and "submit", and I would show the "submit" template.
 
-There are first, a text box for submitting a message, second, a text box for submitting the name of the user, and third a “submit” button.
-I will also put navigation links inside a base.html template, then have the submit.html template extend base.html.
+Discussion of submit template: There are first, a text box for submitting a message which is expressed in line 3 to 5 in the templates, second, a text box for submitting the name of the user, and third a “submit” button, which are expressed as line 7 to 13. If the user click on the 'submit' button on the main page, he would go to this page. The user could subimt messages on this page, line 17 to 20 is the codes would be executed if the user successfully submit the message, it would display the text under "br" line 18, if the subimission failed, it would display "br" line 23. 
+I will also put navigation links inside a base.html template, then have the submit.html template extend base.html. The server would load the base.html first and then load the main page.
 
 ![png]({{ site.baseurl }}/images/submit.png)
 
 This is my view.html
 
 ![png]({{ site.baseurl }}/images/view.png)
+
+## Customize Style
+
+We could change the look of the web app by modifying the style.css file, we could set the background image, change background color, change text style etc. I love butterflys, so I chose a picture of butterfly to be the background image. This is the screenshot of the css file, and it was saved under the static folder, with the background image.
+
+![png]({{ site.baseurl }}/images/css.png)
