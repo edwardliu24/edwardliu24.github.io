@@ -12,7 +12,7 @@ A recurrent neural network uses its internal state to process sequential inputs,
 
 ```python
 #install yfinance in Colab
-pip install yfinance
+!pip install yfinance
 ```
 
 
@@ -39,6 +39,10 @@ import plotly.graph_objects as go
 from sklearn.preprocessing import StandardScaler
 from tensorflow.keras.optimizers import Adam
 from plotly.io import write_html
+import datetime as dt
+from datetime import datetime
+from keras.callbacks import ReduceLROnPlateau, ModelCheckpoint, TensorBoard
+import model_helper
 ```
 
 
@@ -423,27 +427,6 @@ We will predict 60 days into the future, 30 days of which is known data (to us, 
 #reshape our data
 close_data = close_data.reshape((-1))
 
-def predict(num_prediction, model):
-  """
-  Takes in a model and a number for days to predict, outputs the predicted values
-  """
-  prediction_list = close_data[-look_back:]
-  for _ in range(num_prediction):
-      x = prediction_list[-look_back:]
-      x = x.reshape((1, look_back, 1))
-      out = model.predict(x)[0][0]
-      prediction_list = np.append(prediction_list, out)
-  prediction_list = prediction_list[look_back-1:]
-  return prediction_list
-    
-def predict_dates(num_prediction):
-  """
-  Takes in the number of predictions and outputs the dates for these predictions based on previous data
-  """
-  last_date = df['Date'].values[-1]
-  prediction_dates = pd.date_range(last_date, periods=num_prediction+1).tolist()
-  return prediction_dates
-
 num_prediction = 60
 forecast = predict(num_prediction, model)
 forecast_dates = predict_dates(num_prediction)
@@ -645,6 +628,454 @@ write_html(fig, "prediction3.html")
 This looks nothing like before. Our model has completely failed to predict the upward rally beginning march 2020. In fact, it has failed to predict any breakage of establish trend. It appears it is trained to stick to existing trends in an effort to maximize accuracy. This model is useless in the real world. 
 
 But what causes the stark difference between our first and second model? In a many-to-many model tested against seen data, the model is always tasked with predicting the next day. It is easy to guess the next data point as stock prices are relatively continuous, and our model can always guess some number close. Since we are testing with seen data, any miscalculation does not add up. But when facing unseen prediction, our model fails. The second model is a clear demonstration of how our model fails to predict any change in price trends. 
+
+## Third model 
+
+
+```python
+yfin.pdr_override()
+df = pdr.get_data_yahoo("^GSPC ^VIX", start="2020-03-15", end="2022-06-05")
+df = df.reset_index()
+```
+
+    [*********************100%***********************]  2 of 2 completed
+    
+
+
+```python
+df.head()
+dataset_train = pd.concat([df['Date'],df['Open']['^GSPC'],df['High']['^GSPC'],df['Low']['^GSPC'],df['Close']['^GSPC'],df['Adj Close']['^GSPC'],df['Volume']['^GSPC']],axis=1)
+dataset_train.columns=["Date","Open","High","Low","Close","Adj Close","Volume"]
+
+cols = list(dataset_train)[1:]
+datelist_train = list(dataset_train['Date'])
+datelist_train = [dt.datetime.strptime(str(date), '%Y-%m-%d %H:%M:%S').date() for date in datelist_train]
+```
+
+
+```python
+training_set = dataset_train[cols].astype(str)
+training_set = training_set.astype(float)
+
+training_set = training_set.values
+training_set
+```
+
+
+
+
+    array([[2.50859009e+03, 2.56297998e+03, 2.38093994e+03, 2.38612988e+03,
+            2.38612988e+03, 7.78154000e+09],
+           [2.42565991e+03, 2.55392993e+03, 2.36704004e+03, 2.52918994e+03,
+            2.52918994e+03, 8.35850000e+09],
+           [2.43650000e+03, 2.45357007e+03, 2.28052002e+03, 2.39810010e+03,
+            2.39810010e+03, 8.75578000e+09],
+           ...,
+           [4.14977979e+03, 4.16654004e+03, 4.07385010e+03, 4.10122998e+03,
+            4.10122998e+03, 4.14571000e+09],
+           [4.09540991e+03, 4.17750977e+03, 4.07437012e+03, 4.17681982e+03,
+            4.17681982e+03, 3.60493000e+09],
+           [4.13756982e+03, 4.14266992e+03, 4.09866992e+03, 4.10854004e+03,
+            4.10854004e+03, 3.10708000e+09]])
+
+
+
+
+```python
+sc = StandardScaler()
+training_set_scaled = sc.fit_transform(training_set)
+
+sc_predict = StandardScaler()
+sc_predict.fit_transform(training_set[:, 0:1])
+```
+
+
+```python
+# Creating a data structure with 90 timestamps and 1 output
+X_train = []
+y_train = []
+
+n_future = 60   # Number of days we want top predict into the future
+n_past = 90     # Number of past days we want to use to predict the future
+
+for i in range(n_past, len(training_set_scaled) - n_future +1):
+    X_train.append(training_set_scaled[i - n_past:i, 0:dataset_train.shape[1] - 1])
+    y_train.append(training_set_scaled[i + n_future - 1:i + n_future, 0])
+
+X_train, y_train = np.array(X_train), np.array(y_train)
+
+print('X_train shape == {}.'.format(X_train.shape))
+print('y_train shape == {}.'.format(y_train.shape))
+```
+
+    X_train shape == (412, 90, 6).
+    y_train shape == (412, 1).
+    
+
+
+```python
+
+model = Sequential()
+
+model.add(LSTM(units=64, return_sequences=True, input_shape=(n_past, dataset_train.shape[1]-1)))
+
+model.add(LSTM(units=10, return_sequences=False))
+
+model.add(Dropout(0.25))
+
+model.add(Dense(units=1, activation='linear'))
+
+model.compile(optimizer = Adam(learning_rate=0.01), loss='mean_squared_error')
+rlr = ReduceLROnPlateau(monitor='val_loss', factor=0.5, patience=10, verbose=1)
+mcp = ModelCheckpoint(filepath='weights.h5', monitor='val_loss', verbose=1, save_best_only=True, save_weights_only=True)
+
+tb = TensorBoard('logs')
+
+history = model.fit(X_train, y_train, shuffle=True, epochs=30, callbacks=[rlr, mcp, tb], validation_split=0.2, verbose=1, batch_size=256)
+```
+
+    Epoch 1/30
+    1/2 [==============>...............] - ETA: 2s - loss: 0.3743
+    Epoch 1: val_loss improved from inf to 0.53588, saving model to weights.h5
+    2/2 [==============================] - 4s 675ms/step - loss: 0.3255 - val_loss: 0.5359 - lr: 0.0100
+    Epoch 2/30
+    1/2 [==============>...............] - ETA: 0s - loss: 0.1172
+    Epoch 2: val_loss improved from 0.53588 to 0.19279, saving model to weights.h5
+    2/2 [==============================] - 0s 65ms/step - loss: 0.1134 - val_loss: 0.1928 - lr: 0.0100
+    Epoch 3/30
+    1/2 [==============>...............] - ETA: 0s - loss: 0.0771
+    Epoch 3: val_loss did not improve from 0.19279
+    2/2 [==============================] - 0s 48ms/step - loss: 0.0829 - val_loss: 0.2199 - lr: 0.0100
+    Epoch 4/30
+    1/2 [==============>...............] - ETA: 0s - loss: 0.0745
+    Epoch 4: val_loss did not improve from 0.19279
+    2/2 [==============================] - 0s 45ms/step - loss: 0.0721 - val_loss: 0.3150 - lr: 0.0100
+    Epoch 5/30
+    1/2 [==============>...............] - ETA: 0s - loss: 0.0720
+    Epoch 5: val_loss did not improve from 0.19279
+    2/2 [==============================] - 0s 47ms/step - loss: 0.0691 - val_loss: 0.2843 - lr: 0.0100
+    Epoch 6/30
+    1/2 [==============>...............] - ETA: 0s - loss: 0.0635
+    Epoch 6: val_loss did not improve from 0.19279
+    2/2 [==============================] - 0s 58ms/step - loss: 0.0647 - val_loss: 0.2013 - lr: 0.0100
+    Epoch 7/30
+    1/2 [==============>...............] - ETA: 0s - loss: 0.0670
+    Epoch 7: val_loss did not improve from 0.19279
+    2/2 [==============================] - 0s 45ms/step - loss: 0.0679 - val_loss: 0.1998 - lr: 0.0100
+    Epoch 8/30
+    1/2 [==============>...............] - ETA: 0s - loss: 0.0470
+    Epoch 8: val_loss did not improve from 0.19279
+    2/2 [==============================] - 0s 45ms/step - loss: 0.0455 - val_loss: 0.2630 - lr: 0.0100
+    Epoch 9/30
+    1/2 [==============>...............] - ETA: 0s - loss: 0.0545
+    Epoch 9: val_loss did not improve from 0.19279
+    2/2 [==============================] - 0s 56ms/step - loss: 0.0521 - val_loss: 0.2813 - lr: 0.0100
+    Epoch 10/30
+    1/2 [==============>...............] - ETA: 0s - loss: 0.0525
+    Epoch 10: val_loss did not improve from 0.19279
+    2/2 [==============================] - 0s 52ms/step - loss: 0.0478 - val_loss: 0.2688 - lr: 0.0100
+    Epoch 11/30
+    1/2 [==============>...............] - ETA: 0s - loss: 0.0529
+    Epoch 11: val_loss did not improve from 0.19279
+    2/2 [==============================] - 0s 48ms/step - loss: 0.0510 - val_loss: 0.2083 - lr: 0.0100
+    Epoch 12/30
+    1/2 [==============>...............] - ETA: 0s - loss: 0.0533
+    Epoch 12: ReduceLROnPlateau reducing learning rate to 0.004999999888241291.
+    
+    Epoch 12: val_loss did not improve from 0.19279
+    2/2 [==============================] - 0s 55ms/step - loss: 0.0539 - val_loss: 0.2514 - lr: 0.0100
+    Epoch 13/30
+    1/2 [==============>...............] - ETA: 0s - loss: 0.0490
+    Epoch 13: val_loss did not improve from 0.19279
+    2/2 [==============================] - 0s 48ms/step - loss: 0.0510 - val_loss: 0.2670 - lr: 0.0050
+    Epoch 14/30
+    1/2 [==============>...............] - ETA: 0s - loss: 0.0518
+    Epoch 14: val_loss did not improve from 0.19279
+    2/2 [==============================] - 0s 46ms/step - loss: 0.0472 - val_loss: 0.2597 - lr: 0.0050
+    Epoch 15/30
+    1/2 [==============>...............] - ETA: 0s - loss: 0.0452
+    Epoch 15: val_loss did not improve from 0.19279
+    2/2 [==============================] - 0s 58ms/step - loss: 0.0461 - val_loss: 0.2520 - lr: 0.0050
+    Epoch 16/30
+    1/2 [==============>...............] - ETA: 0s - loss: 0.0477
+    Epoch 16: val_loss did not improve from 0.19279
+    2/2 [==============================] - 0s 44ms/step - loss: 0.0477 - val_loss: 0.2500 - lr: 0.0050
+    Epoch 17/30
+    1/2 [==============>...............] - ETA: 0s - loss: 0.0433
+    Epoch 17: val_loss did not improve from 0.19279
+    2/2 [==============================] - 0s 45ms/step - loss: 0.0419 - val_loss: 0.2218 - lr: 0.0050
+    Epoch 18/30
+    1/2 [==============>...............] - ETA: 0s - loss: 0.0384
+    Epoch 18: val_loss did not improve from 0.19279
+    2/2 [==============================] - 0s 43ms/step - loss: 0.0414 - val_loss: 0.2112 - lr: 0.0050
+    Epoch 19/30
+    1/2 [==============>...............] - ETA: 0s - loss: 0.0458
+    Epoch 19: val_loss did not improve from 0.19279
+    2/2 [==============================] - 0s 44ms/step - loss: 0.0448 - val_loss: 0.2349 - lr: 0.0050
+    Epoch 20/30
+    1/2 [==============>...............] - ETA: 0s - loss: 0.0371
+    Epoch 20: val_loss did not improve from 0.19279
+    2/2 [==============================] - 0s 60ms/step - loss: 0.0384 - val_loss: 0.2610 - lr: 0.0050
+    Epoch 21/30
+    1/2 [==============>...............] - ETA: 0s - loss: 0.0443
+    Epoch 21: val_loss did not improve from 0.19279
+    2/2 [==============================] - 0s 46ms/step - loss: 0.0448 - val_loss: 0.2702 - lr: 0.0050
+    Epoch 22/30
+    1/2 [==============>...............] - ETA: 0s - loss: 0.0417
+    Epoch 22: ReduceLROnPlateau reducing learning rate to 0.0024999999441206455.
+    
+    Epoch 22: val_loss did not improve from 0.19279
+    2/2 [==============================] - 0s 48ms/step - loss: 0.0429 - val_loss: 0.2440 - lr: 0.0050
+    Epoch 23/30
+    1/2 [==============>...............] - ETA: 0s - loss: 0.0301
+    Epoch 23: val_loss did not improve from 0.19279
+    2/2 [==============================] - 0s 56ms/step - loss: 0.0334 - val_loss: 0.2224 - lr: 0.0025
+    Epoch 24/30
+    1/2 [==============>...............] - ETA: 0s - loss: 0.0385
+    Epoch 24: val_loss did not improve from 0.19279
+    2/2 [==============================] - 0s 44ms/step - loss: 0.0368 - val_loss: 0.2041 - lr: 0.0025
+    Epoch 25/30
+    1/2 [==============>...............] - ETA: 0s - loss: 0.0480
+    Epoch 25: val_loss did not improve from 0.19279
+    2/2 [==============================] - 0s 44ms/step - loss: 0.0429 - val_loss: 0.2012 - lr: 0.0025
+    Epoch 26/30
+    1/2 [==============>...............] - ETA: 0s - loss: 0.0345
+    Epoch 26: val_loss did not improve from 0.19279
+    2/2 [==============================] - 0s 49ms/step - loss: 0.0369 - val_loss: 0.2098 - lr: 0.0025
+    Epoch 27/30
+    1/2 [==============>...............] - ETA: 0s - loss: 0.0407
+    Epoch 27: val_loss did not improve from 0.19279
+    2/2 [==============================] - 0s 44ms/step - loss: 0.0413 - val_loss: 0.2300 - lr: 0.0025
+    Epoch 28/30
+    1/2 [==============>...............] - ETA: 0s - loss: 0.0455
+    Epoch 28: val_loss did not improve from 0.19279
+    2/2 [==============================] - 0s 43ms/step - loss: 0.0397 - val_loss: 0.2571 - lr: 0.0025
+    Epoch 29/30
+    1/2 [==============>...............] - ETA: 0s - loss: 0.0407
+    Epoch 29: val_loss did not improve from 0.19279
+    2/2 [==============================] - 0s 45ms/step - loss: 0.0413 - val_loss: 0.2726 - lr: 0.0025
+    Epoch 30/30
+    1/2 [==============>...............] - ETA: 0s - loss: 0.0411
+    Epoch 30: val_loss did not improve from 0.19279
+    2/2 [==============================] - 0s 47ms/step - loss: 0.0406 - val_loss: 0.2761 - lr: 0.0025
+    
+
+
+```python
+datelist_future = pd.date_range(datelist_train[-1], periods=n_future, freq='1d').tolist()
+datelist_future_ = []
+for this_timestamp in datelist_future:
+    datelist_future_.append(this_timestamp.date())
+```
+
+
+```python
+predictions_future = model.predict(X_train[-n_future:])
+
+predictions_train = model.predict(X_train[n_past:])
+```
+
+
+```python
+y_pred_future = sc_predict.inverse_transform(predictions_future)
+y_pred_train = sc_predict.inverse_transform(predictions_train)
+
+PREDICTIONS_FUTURE = pd.DataFrame(y_pred_future, columns=['Open']).set_index(pd.Series(datelist_future))
+PREDICTION_TRAIN = pd.DataFrame(y_pred_train, columns=['Open']).set_index(pd.Series(datelist_train[2 * n_past + n_future -1:]))
+
+# Convert <datetime.date> to <Timestamp> for PREDCITION_TRAIN
+PREDICTION_TRAIN.index = PREDICTION_TRAIN.index.to_series().apply(datetime_to_timestamp)
+
+PREDICTION_TRAIN
+```
+
+
+
+
+
+  <div id="df-3b130d4a-b7ee-45dc-8483-ca7f6b7648fa">
+    <div class="colab-df-container">
+      <div>
+<style scoped>
+    .dataframe tbody tr th:only-of-type {
+        vertical-align: middle;
+    }
+
+    .dataframe tbody tr th {
+        vertical-align: top;
+    }
+
+    .dataframe thead th {
+        text-align: right;
+    }
+</style>
+<table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>Open</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>2021-02-25</th>
+      <td>3871.431152</td>
+    </tr>
+    <tr>
+      <th>2021-02-26</th>
+      <td>3876.457031</td>
+    </tr>
+    <tr>
+      <th>2021-03-01</th>
+      <td>3884.095703</td>
+    </tr>
+    <tr>
+      <th>2021-03-02</th>
+      <td>3892.711670</td>
+    </tr>
+    <tr>
+      <th>2021-03-03</th>
+      <td>3902.041992</td>
+    </tr>
+    <tr>
+      <th>...</th>
+      <td>...</td>
+    </tr>
+    <tr>
+      <th>2022-05-27</th>
+      <td>4494.006348</td>
+    </tr>
+    <tr>
+      <th>2022-05-31</th>
+      <td>4484.812500</td>
+    </tr>
+    <tr>
+      <th>2022-06-01</th>
+      <td>4460.539062</td>
+    </tr>
+    <tr>
+      <th>2022-06-02</th>
+      <td>4430.206543</td>
+    </tr>
+    <tr>
+      <th>2022-06-03</th>
+      <td>4434.131836</td>
+    </tr>
+  </tbody>
+</table>
+<p>322 rows × 1 columns</p>
+</div>
+      <button class="colab-df-convert" onclick="convertToInteractive('df-3b130d4a-b7ee-45dc-8483-ca7f6b7648fa')"
+              title="Convert this dataframe to an interactive table."
+              style="display:none;">
+
+  <svg xmlns="http://www.w3.org/2000/svg" height="24px"viewBox="0 0 24 24"
+       width="24px">
+    <path d="M0 0h24v24H0V0z" fill="none"/>
+    <path d="M18.56 5.44l.94 2.06.94-2.06 2.06-.94-2.06-.94-.94-2.06-.94 2.06-2.06.94zm-11 1L8.5 8.5l.94-2.06 2.06-.94-2.06-.94L8.5 2.5l-.94 2.06-2.06.94zm10 10l.94 2.06.94-2.06 2.06-.94-2.06-.94-.94-2.06-.94 2.06-2.06.94z"/><path d="M17.41 7.96l-1.37-1.37c-.4-.4-.92-.59-1.43-.59-.52 0-1.04.2-1.43.59L10.3 9.45l-7.72 7.72c-.78.78-.78 2.05 0 2.83L4 21.41c.39.39.9.59 1.41.59.51 0 1.02-.2 1.41-.59l7.78-7.78 2.81-2.81c.8-.78.8-2.07 0-2.86zM5.41 20L4 18.59l7.72-7.72 1.47 1.35L5.41 20z"/>
+  </svg>
+      </button>
+
+  <style>
+    .colab-df-container {
+      display:flex;
+      flex-wrap:wrap;
+      gap: 12px;
+    }
+
+    .colab-df-convert {
+      background-color: #E8F0FE;
+      border: none;
+      border-radius: 50%;
+      cursor: pointer;
+      display: none;
+      fill: #1967D2;
+      height: 32px;
+      padding: 0 0 0 0;
+      width: 32px;
+    }
+
+    .colab-df-convert:hover {
+      background-color: #E2EBFA;
+      box-shadow: 0px 1px 2px rgba(60, 64, 67, 0.3), 0px 1px 3px 1px rgba(60, 64, 67, 0.15);
+      fill: #174EA6;
+    }
+
+    [theme=dark] .colab-df-convert {
+      background-color: #3B4455;
+      fill: #D2E3FC;
+    }
+
+    [theme=dark] .colab-df-convert:hover {
+      background-color: #434B5C;
+      box-shadow: 0px 1px 3px 1px rgba(0, 0, 0, 0.15);
+      filter: drop-shadow(0px 1px 2px rgba(0, 0, 0, 0.3));
+      fill: #FFFFFF;
+    }
+  </style>
+
+      <script>
+        const buttonEl =
+          document.querySelector('#df-3b130d4a-b7ee-45dc-8483-ca7f6b7648fa button.colab-df-convert');
+        buttonEl.style.display =
+          google.colab.kernel.accessAllowed ? 'block' : 'none';
+
+        async function convertToInteractive(key) {
+          const element = document.querySelector('#df-3b130d4a-b7ee-45dc-8483-ca7f6b7648fa');
+          const dataTable =
+            await google.colab.kernel.invokeFunction('convertToInteractive',
+                                                     [key], {});
+          if (!dataTable) return;
+
+          const docLinkHtml = 'Like what you see? Visit the ' +
+            '<a target="_blank" href=https://colab.research.google.com/notebooks/data_table.ipynb>data table notebook</a>'
+            + ' to learn more about interactive tables.';
+          element.innerHTML = '';
+          dataTable['output_type'] = 'display_data';
+          await google.colab.output.renderOutput(dataTable, element);
+          const docLink = document.createElement('div');
+          docLink.innerHTML = docLinkHtml;
+          element.appendChild(docLink);
+        }
+      </script>
+    </div>
+  </div>
+
+
+
+
+
+```python
+
+
+trace1 = go.Scatter(
+    x = PREDICTIONS_FUTURE.index,
+    y = PREDICTIONS_FUTURE['Open'],
+    mode = 'lines',
+    name = 'Predicted Stock Price'
+)
+trace2 = go.Scatter(
+    x = PREDICTION_TRAIN.index,
+    y = PREDICTION_TRAIN['Open'],
+    mode = 'lines',
+    name = 'Training Predictions'
+)
+trace3 = go.Scatter(
+    x = dataset_train['Date'],
+    y = dataset_train['Open'],
+    mode = 'lines',
+    name = 'Actual Stock Prices'
+)
+layout = go.Layout(
+    title = "NQ100 Prediction",
+    xaxis = {'title' : "Date"},
+    yaxis = {'title' : "Close"}
+)
+fig = go.Figure(data=[trace1, trace2, trace3], layout=layout)
+fig.show()
+write_html(fig, "prediction4.html")
+```
+{% include prediction4.html %}
 
 ## Conclusion
 
