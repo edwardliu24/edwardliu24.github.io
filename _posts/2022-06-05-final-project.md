@@ -1,11 +1,21 @@
 ---
 layout: post
-title: stock preidiction model
+title: Investigating Stock Prediction with RNN
 ---
 
 # Investigating Stock Prediction with RNN
 
-A recurrent neural network uses its internal state to process sequential inputs, which makes it great for time series data such as stock prices. In this blog post, we will investigate the popular LSTM, long short-term memory, method for stock prediction.
+## Overview
+
+A recurrent neural network uses its internal state to process sequential inputs, which makes it great for time series data such as stock prices. LSTM has become the most popular technique on the Internet for machine learning stock prediction. Many claim to have astonishing accuracies. In this blog post, we will investigate the popular LSTM, long short-term memory, method for stock prediction.
+
+We will construct in total three models using LSTM. The first one predicts one data point using multiple, which is the most popular technique and enjoys the most promising accuracy claims. The second model uses a different many-to-many technique for LTSM. Based on the previous two, we propose a hypothesis regarding the effectiveness of LSTM stock predictors and construct a third model to test our claim.
+
+Here is a flow chart of our project.
+
+![png]({{ site.baseurl }}/images/flowchart.png)
+
+Here is the link to our GitHub repo. https://github.com/justinlaicy926/PIC16BProject
 
 ## Data Import and Clean-up
 
@@ -629,7 +639,13 @@ This looks nothing like before. Our model has completely failed to predict the u
 
 But what causes the stark difference between our first and second model? In a many-to-many model tested against seen data, the model is always tasked with predicting the next day. It is easy to guess the next data point as stock prices are relatively continuous, and our model can always guess some number close. Since we are testing with seen data, any miscalculation does not add up. But when facing unseen prediction, our model fails. The second model is a clear demonstration of how our model fails to predict any change in price trends. 
 
-## Third model 
+## Third Model 
+
+We hypothesize that our RNN model is simply adhering to the most dominant trend. Instead of prediction based on identifying trends and patterns, which was expected from RNN, it is acting more of a regression role. Thus, we decide to conduct a third model based on data points from March 2020 to present day. 
+
+During this time period, aggresive monetary and fiscal policies reshaped market. The resulting stock market performance deviated from the pre-established trends for over a decade. If our hypothesis is true, our third model will guess the stock market will stcik to a never ending upward rally.
+
+Model 3 is exactly the same as our previous model, except trained with localized data. 
 
 
 ```python
@@ -695,8 +711,8 @@ sc_predict.fit_transform(training_set[:, 0:1])
 X_train = []
 y_train = []
 
-n_future = 60   # Number of days we want top predict into the future
-n_past = 90     # Number of past days we want to use to predict the future
+n_future = 60  
+n_past = 90     
 
 for i in range(n_past, len(training_set_scaled) - n_future +1):
     X_train.append(training_set_scaled[i - n_past:i, 0:dataset_train.shape[1] - 1])
@@ -734,133 +750,6 @@ tb = TensorBoard('logs')
 history = model.fit(X_train, y_train, shuffle=True, epochs=30, callbacks=[rlr, mcp, tb], validation_split=0.2, verbose=1, batch_size=256)
 ```
 
-    Epoch 1/30
-    1/2 [==============>...............] - ETA: 2s - loss: 0.3743
-    Epoch 1: val_loss improved from inf to 0.53588, saving model to weights.h5
-    2/2 [==============================] - 4s 675ms/step - loss: 0.3255 - val_loss: 0.5359 - lr: 0.0100
-    Epoch 2/30
-    1/2 [==============>...............] - ETA: 0s - loss: 0.1172
-    Epoch 2: val_loss improved from 0.53588 to 0.19279, saving model to weights.h5
-    2/2 [==============================] - 0s 65ms/step - loss: 0.1134 - val_loss: 0.1928 - lr: 0.0100
-    Epoch 3/30
-    1/2 [==============>...............] - ETA: 0s - loss: 0.0771
-    Epoch 3: val_loss did not improve from 0.19279
-    2/2 [==============================] - 0s 48ms/step - loss: 0.0829 - val_loss: 0.2199 - lr: 0.0100
-    Epoch 4/30
-    1/2 [==============>...............] - ETA: 0s - loss: 0.0745
-    Epoch 4: val_loss did not improve from 0.19279
-    2/2 [==============================] - 0s 45ms/step - loss: 0.0721 - val_loss: 0.3150 - lr: 0.0100
-    Epoch 5/30
-    1/2 [==============>...............] - ETA: 0s - loss: 0.0720
-    Epoch 5: val_loss did not improve from 0.19279
-    2/2 [==============================] - 0s 47ms/step - loss: 0.0691 - val_loss: 0.2843 - lr: 0.0100
-    Epoch 6/30
-    1/2 [==============>...............] - ETA: 0s - loss: 0.0635
-    Epoch 6: val_loss did not improve from 0.19279
-    2/2 [==============================] - 0s 58ms/step - loss: 0.0647 - val_loss: 0.2013 - lr: 0.0100
-    Epoch 7/30
-    1/2 [==============>...............] - ETA: 0s - loss: 0.0670
-    Epoch 7: val_loss did not improve from 0.19279
-    2/2 [==============================] - 0s 45ms/step - loss: 0.0679 - val_loss: 0.1998 - lr: 0.0100
-    Epoch 8/30
-    1/2 [==============>...............] - ETA: 0s - loss: 0.0470
-    Epoch 8: val_loss did not improve from 0.19279
-    2/2 [==============================] - 0s 45ms/step - loss: 0.0455 - val_loss: 0.2630 - lr: 0.0100
-    Epoch 9/30
-    1/2 [==============>...............] - ETA: 0s - loss: 0.0545
-    Epoch 9: val_loss did not improve from 0.19279
-    2/2 [==============================] - 0s 56ms/step - loss: 0.0521 - val_loss: 0.2813 - lr: 0.0100
-    Epoch 10/30
-    1/2 [==============>...............] - ETA: 0s - loss: 0.0525
-    Epoch 10: val_loss did not improve from 0.19279
-    2/2 [==============================] - 0s 52ms/step - loss: 0.0478 - val_loss: 0.2688 - lr: 0.0100
-    Epoch 11/30
-    1/2 [==============>...............] - ETA: 0s - loss: 0.0529
-    Epoch 11: val_loss did not improve from 0.19279
-    2/2 [==============================] - 0s 48ms/step - loss: 0.0510 - val_loss: 0.2083 - lr: 0.0100
-    Epoch 12/30
-    1/2 [==============>...............] - ETA: 0s - loss: 0.0533
-    Epoch 12: ReduceLROnPlateau reducing learning rate to 0.004999999888241291.
-    
-    Epoch 12: val_loss did not improve from 0.19279
-    2/2 [==============================] - 0s 55ms/step - loss: 0.0539 - val_loss: 0.2514 - lr: 0.0100
-    Epoch 13/30
-    1/2 [==============>...............] - ETA: 0s - loss: 0.0490
-    Epoch 13: val_loss did not improve from 0.19279
-    2/2 [==============================] - 0s 48ms/step - loss: 0.0510 - val_loss: 0.2670 - lr: 0.0050
-    Epoch 14/30
-    1/2 [==============>...............] - ETA: 0s - loss: 0.0518
-    Epoch 14: val_loss did not improve from 0.19279
-    2/2 [==============================] - 0s 46ms/step - loss: 0.0472 - val_loss: 0.2597 - lr: 0.0050
-    Epoch 15/30
-    1/2 [==============>...............] - ETA: 0s - loss: 0.0452
-    Epoch 15: val_loss did not improve from 0.19279
-    2/2 [==============================] - 0s 58ms/step - loss: 0.0461 - val_loss: 0.2520 - lr: 0.0050
-    Epoch 16/30
-    1/2 [==============>...............] - ETA: 0s - loss: 0.0477
-    Epoch 16: val_loss did not improve from 0.19279
-    2/2 [==============================] - 0s 44ms/step - loss: 0.0477 - val_loss: 0.2500 - lr: 0.0050
-    Epoch 17/30
-    1/2 [==============>...............] - ETA: 0s - loss: 0.0433
-    Epoch 17: val_loss did not improve from 0.19279
-    2/2 [==============================] - 0s 45ms/step - loss: 0.0419 - val_loss: 0.2218 - lr: 0.0050
-    Epoch 18/30
-    1/2 [==============>...............] - ETA: 0s - loss: 0.0384
-    Epoch 18: val_loss did not improve from 0.19279
-    2/2 [==============================] - 0s 43ms/step - loss: 0.0414 - val_loss: 0.2112 - lr: 0.0050
-    Epoch 19/30
-    1/2 [==============>...............] - ETA: 0s - loss: 0.0458
-    Epoch 19: val_loss did not improve from 0.19279
-    2/2 [==============================] - 0s 44ms/step - loss: 0.0448 - val_loss: 0.2349 - lr: 0.0050
-    Epoch 20/30
-    1/2 [==============>...............] - ETA: 0s - loss: 0.0371
-    Epoch 20: val_loss did not improve from 0.19279
-    2/2 [==============================] - 0s 60ms/step - loss: 0.0384 - val_loss: 0.2610 - lr: 0.0050
-    Epoch 21/30
-    1/2 [==============>...............] - ETA: 0s - loss: 0.0443
-    Epoch 21: val_loss did not improve from 0.19279
-    2/2 [==============================] - 0s 46ms/step - loss: 0.0448 - val_loss: 0.2702 - lr: 0.0050
-    Epoch 22/30
-    1/2 [==============>...............] - ETA: 0s - loss: 0.0417
-    Epoch 22: ReduceLROnPlateau reducing learning rate to 0.0024999999441206455.
-    
-    Epoch 22: val_loss did not improve from 0.19279
-    2/2 [==============================] - 0s 48ms/step - loss: 0.0429 - val_loss: 0.2440 - lr: 0.0050
-    Epoch 23/30
-    1/2 [==============>...............] - ETA: 0s - loss: 0.0301
-    Epoch 23: val_loss did not improve from 0.19279
-    2/2 [==============================] - 0s 56ms/step - loss: 0.0334 - val_loss: 0.2224 - lr: 0.0025
-    Epoch 24/30
-    1/2 [==============>...............] - ETA: 0s - loss: 0.0385
-    Epoch 24: val_loss did not improve from 0.19279
-    2/2 [==============================] - 0s 44ms/step - loss: 0.0368 - val_loss: 0.2041 - lr: 0.0025
-    Epoch 25/30
-    1/2 [==============>...............] - ETA: 0s - loss: 0.0480
-    Epoch 25: val_loss did not improve from 0.19279
-    2/2 [==============================] - 0s 44ms/step - loss: 0.0429 - val_loss: 0.2012 - lr: 0.0025
-    Epoch 26/30
-    1/2 [==============>...............] - ETA: 0s - loss: 0.0345
-    Epoch 26: val_loss did not improve from 0.19279
-    2/2 [==============================] - 0s 49ms/step - loss: 0.0369 - val_loss: 0.2098 - lr: 0.0025
-    Epoch 27/30
-    1/2 [==============>...............] - ETA: 0s - loss: 0.0407
-    Epoch 27: val_loss did not improve from 0.19279
-    2/2 [==============================] - 0s 44ms/step - loss: 0.0413 - val_loss: 0.2300 - lr: 0.0025
-    Epoch 28/30
-    1/2 [==============>...............] - ETA: 0s - loss: 0.0455
-    Epoch 28: val_loss did not improve from 0.19279
-    2/2 [==============================] - 0s 43ms/step - loss: 0.0397 - val_loss: 0.2571 - lr: 0.0025
-    Epoch 29/30
-    1/2 [==============>...............] - ETA: 0s - loss: 0.0407
-    Epoch 29: val_loss did not improve from 0.19279
-    2/2 [==============================] - 0s 45ms/step - loss: 0.0413 - val_loss: 0.2726 - lr: 0.0025
-    Epoch 30/30
-    1/2 [==============>...............] - ETA: 0s - loss: 0.0411
-    Epoch 30: val_loss did not improve from 0.19279
-    2/2 [==============================] - 0s 47ms/step - loss: 0.0406 - val_loss: 0.2761 - lr: 0.0025
-    
-
-
 ```python
 datelist_future = pd.date_range(datelist_train[-1], periods=n_future, freq='1d').tolist()
 datelist_future_ = []
@@ -888,161 +777,6 @@ PREDICTION_TRAIN.index = PREDICTION_TRAIN.index.to_series().apply(datetime_to_ti
 
 PREDICTION_TRAIN
 ```
-
-
-
-
-
-  <div id="df-3b130d4a-b7ee-45dc-8483-ca7f6b7648fa">
-    <div class="colab-df-container">
-      <div>
-<style scoped>
-    .dataframe tbody tr th:only-of-type {
-        vertical-align: middle;
-    }
-
-    .dataframe tbody tr th {
-        vertical-align: top;
-    }
-
-    .dataframe thead th {
-        text-align: right;
-    }
-</style>
-<table border="1" class="dataframe">
-  <thead>
-    <tr style="text-align: right;">
-      <th></th>
-      <th>Open</th>
-    </tr>
-  </thead>
-  <tbody>
-    <tr>
-      <th>2021-02-25</th>
-      <td>3871.431152</td>
-    </tr>
-    <tr>
-      <th>2021-02-26</th>
-      <td>3876.457031</td>
-    </tr>
-    <tr>
-      <th>2021-03-01</th>
-      <td>3884.095703</td>
-    </tr>
-    <tr>
-      <th>2021-03-02</th>
-      <td>3892.711670</td>
-    </tr>
-    <tr>
-      <th>2021-03-03</th>
-      <td>3902.041992</td>
-    </tr>
-    <tr>
-      <th>...</th>
-      <td>...</td>
-    </tr>
-    <tr>
-      <th>2022-05-27</th>
-      <td>4494.006348</td>
-    </tr>
-    <tr>
-      <th>2022-05-31</th>
-      <td>4484.812500</td>
-    </tr>
-    <tr>
-      <th>2022-06-01</th>
-      <td>4460.539062</td>
-    </tr>
-    <tr>
-      <th>2022-06-02</th>
-      <td>4430.206543</td>
-    </tr>
-    <tr>
-      <th>2022-06-03</th>
-      <td>4434.131836</td>
-    </tr>
-  </tbody>
-</table>
-<p>322 rows × 1 columns</p>
-</div>
-      <button class="colab-df-convert" onclick="convertToInteractive('df-3b130d4a-b7ee-45dc-8483-ca7f6b7648fa')"
-              title="Convert this dataframe to an interactive table."
-              style="display:none;">
-
-  <svg xmlns="http://www.w3.org/2000/svg" height="24px"viewBox="0 0 24 24"
-       width="24px">
-    <path d="M0 0h24v24H0V0z" fill="none"/>
-    <path d="M18.56 5.44l.94 2.06.94-2.06 2.06-.94-2.06-.94-.94-2.06-.94 2.06-2.06.94zm-11 1L8.5 8.5l.94-2.06 2.06-.94-2.06-.94L8.5 2.5l-.94 2.06-2.06.94zm10 10l.94 2.06.94-2.06 2.06-.94-2.06-.94-.94-2.06-.94 2.06-2.06.94z"/><path d="M17.41 7.96l-1.37-1.37c-.4-.4-.92-.59-1.43-.59-.52 0-1.04.2-1.43.59L10.3 9.45l-7.72 7.72c-.78.78-.78 2.05 0 2.83L4 21.41c.39.39.9.59 1.41.59.51 0 1.02-.2 1.41-.59l7.78-7.78 2.81-2.81c.8-.78.8-2.07 0-2.86zM5.41 20L4 18.59l7.72-7.72 1.47 1.35L5.41 20z"/>
-  </svg>
-      </button>
-
-  <style>
-    .colab-df-container {
-      display:flex;
-      flex-wrap:wrap;
-      gap: 12px;
-    }
-
-    .colab-df-convert {
-      background-color: #E8F0FE;
-      border: none;
-      border-radius: 50%;
-      cursor: pointer;
-      display: none;
-      fill: #1967D2;
-      height: 32px;
-      padding: 0 0 0 0;
-      width: 32px;
-    }
-
-    .colab-df-convert:hover {
-      background-color: #E2EBFA;
-      box-shadow: 0px 1px 2px rgba(60, 64, 67, 0.3), 0px 1px 3px 1px rgba(60, 64, 67, 0.15);
-      fill: #174EA6;
-    }
-
-    [theme=dark] .colab-df-convert {
-      background-color: #3B4455;
-      fill: #D2E3FC;
-    }
-
-    [theme=dark] .colab-df-convert:hover {
-      background-color: #434B5C;
-      box-shadow: 0px 1px 3px 1px rgba(0, 0, 0, 0.15);
-      filter: drop-shadow(0px 1px 2px rgba(0, 0, 0, 0.3));
-      fill: #FFFFFF;
-    }
-  </style>
-
-      <script>
-        const buttonEl =
-          document.querySelector('#df-3b130d4a-b7ee-45dc-8483-ca7f6b7648fa button.colab-df-convert');
-        buttonEl.style.display =
-          google.colab.kernel.accessAllowed ? 'block' : 'none';
-
-        async function convertToInteractive(key) {
-          const element = document.querySelector('#df-3b130d4a-b7ee-45dc-8483-ca7f6b7648fa');
-          const dataTable =
-            await google.colab.kernel.invokeFunction('convertToInteractive',
-                                                     [key], {});
-          if (!dataTable) return;
-
-          const docLinkHtml = 'Like what you see? Visit the ' +
-            '<a target="_blank" href=https://colab.research.google.com/notebooks/data_table.ipynb>data table notebook</a>'
-            + ' to learn more about interactive tables.';
-          element.innerHTML = '';
-          dataTable['output_type'] = 'display_data';
-          await google.colab.output.renderOutput(dataTable, element);
-          const docLink = document.createElement('div');
-          docLink.innerHTML = docLinkHtml;
-          element.appendChild(docLink);
-        }
-      </script>
-    </div>
-  </div>
-
-
-
 
 
 ```python
@@ -1077,6 +811,10 @@ write_html(fig, "prediction4.html")
 ```
 {% include prediction4.html %}
 
+It appears our model has performed exactly as we have hypothesized. In other words, our use of RNN fails to predict significant trend movements to enable profitable trades. Instead of prediction, our model excels at regression. 
+
 ## Conclusion
 
-Our many-to-many model shows the real-world usefulness of modelling stock prices using RNN. We remain skeptical of technical analysis doctrince based on price trend analysis.
+Our many-to-many model shows the real-world usefulness, or the lack thereof, of modelling stock prices using RNN. We remain skeptical of technical analysis doctrince based on price trend analysis. 
+
+Despite our search for a reliable technical analysis RNN model has failed, it is insufficient to conclude the merit of all technical analysis methods. More in-depth experimentation is needed. 
