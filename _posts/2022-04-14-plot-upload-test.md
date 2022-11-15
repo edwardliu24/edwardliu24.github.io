@@ -1,6 +1,6 @@
 ---
 layout: post
-title: Homework0 
+title: Plot Upload Test 
 ---
 
 # How to Make Scatter Plot with Python
