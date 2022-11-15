@@ -163,7 +163,7 @@ plt.show()
 
 
     
-![png](output_17_1.png)
+![png]({{ site.baseurl }}/images/output_17_1.png)
     
 
 
@@ -389,5 +389,5 @@ returns(365,df[-395:],model1)
 
 
     
-![png](output_19_1.png)
+![png]({{ site.baseurl }}/images/output_19_1.png)
     
