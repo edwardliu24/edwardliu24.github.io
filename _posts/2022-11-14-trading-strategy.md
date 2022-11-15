@@ -1,3 +1,9 @@
+---
+layout: post
+title: Trading Strategy
+---
+
+
 # Trading Strategy on Chinese Stock Index Devleoped by Deep Learning
 
 ## Main Idea
